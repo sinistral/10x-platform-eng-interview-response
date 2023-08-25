@@ -4,7 +4,7 @@ import json
 import pandas
 import wsgiref.simple_server
 
-weather_data = None
+LIMIT_PARAM_NAME = "limit"
 
 class WeatherQueryResource:
 
@@ -21,6 +21,22 @@ class WeatherQueryResource:
             "string": lambda x: f"\"{x}\"",
             "floating": lambda x: f"{x}"
         }
+
+    def _assert_request_params(self, params):
+        for p in params:
+            if not p in self._query_params:
+                raise falcon.HTTPBadRequest(
+                    title="Invalid Query Parameter",
+                    description=f"invalid query parameter: {p}; expected one of {self._query_params}"
+                )
+        if LIMIT_PARAM_NAME in params:
+            try:
+                int(params[LIMIT_PARAM_NAME])
+            except ValueError:
+                raise falcon.HTTPBadRequest(
+                    title="Invalid Query Parameter Value",
+                    description=f"invalid query parameter value: {LIMIT_PARAM_NAME}"
+                )
 
     def _param_type_formatter(self, typestr):
         if typestr in self._param_type_formatters:
@@ -44,20 +60,18 @@ class WeatherQueryResource:
         return formatter(pv)
 
     def on_get(self, req: falcon.Request, rsp: falcon.Response):
-        for p in req.params:
-            if not p in self._query_params:
-                raise falcon.HTTPBadRequest(
-                    title="Invalid Query Parameter",
-                    description=f"invalid query parameter: {p}; expected one of {self._query_params}"
-                )
+        self._assert_request_params(req.params)
         dataframe_query = " & ".join(
-            [f"{k} == {self._format_param_for_query(k, req.params[k])}" for k in req.params if not k == "limit" ]
+            [
+                f"{k} == {self._format_param_for_query(k, req.params[k])}"
+                for k in req.params
+                if not k == LIMIT_PARAM_NAME
+            ]
         )
-        rsp.media = self._serialize(self._data.query(dataframe_query))
-
-
-def limit(dataframe, n):
-    return dataframe.head(n)
+        limit_fn = \
+            (lambda df: df.head(int(req.params[LIMIT_PARAM_NAME]))) if (LIMIT_PARAM_NAME in req.params) \
+            else lambda x: x
+        rsp.media = self._serialize(limit_fn(self._data.query(dataframe_query)))
 
 
 app = falcon.App()
