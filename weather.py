@@ -8,12 +8,13 @@ weather_data = None
 
 class WeatherQueryResource:
 
-    def __init__(self, data):
+    def __init__(self, data: pandas.DataFrame):
         # Note: In the absence of a more general interface abstraction, we're
         # simply assuming that the datasource is a pandas dataframe.  More
         # likely in production this will be a DB connection, or reference to
         # some other form of remote persistence.
         self.data = data
+        self.query_params = set(list(self.data.columns) + ["limit"])
 
     def _serialize(self, dataframe):
         response_data = dataframe.to_dict(orient="records")
@@ -26,16 +27,16 @@ class WeatherQueryResource:
             "records": response_data
         }
 
-    def on_get(self, req, rsp):
-        rsp.media = self._serialize(self.data)
+    def on_get(self, req: falcon.Request, rsp: falcon.Response):
+        for p in req.params:
+            if not p in self.query_params:
+                raise falcon.HTTPBadRequest(
+                    title="Invalid Query Parameter",
+                    description=f"invalid query parameter: {p}; expected one of {self.query_params}"
+                )
+        dataframe_query = " & ".join([f"{k} == {req.params[k]}" for k in req.params if not k == "limit" ])
+        rsp.media = self._serialize(self.data.query(dataframe_query))
 
-
-def select(dataframe, **kwargs):
-    # FIX: validate keywords as valid column names
-    query_terms = []
-    for k in kwargs:
-        query_terms.append(f"{k} == {kwargs[k]}")
-    return dataframe.query("&".join(query_terms))
 
 def limit(dataframe, n):
     return dataframe.head(n)
