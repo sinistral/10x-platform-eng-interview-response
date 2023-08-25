@@ -13,8 +13,20 @@ class WeatherQueryResource:
         # simply assuming that the datasource is a pandas dataframe.  More
         # likely in production this will be a DB connection, or reference to
         # some other form of remote persistence.
-        self.data = data
-        self.query_params = set(list(self.data.columns) + ["limit"])
+        self._data = data
+        self._query_params = set(list(self._data.columns) + ["limit"])
+
+        self._param_types = dict(self._data.apply(lambda x: pandas.api.types.infer_dtype(x, skipna=True), axis=0))
+        self._param_type_formatters = {
+            "string": lambda x: f"\"{x}\"",
+            "floating": lambda x: f"{x}"
+        }
+
+    def _param_type_formatter(self, typestr):
+        if typestr in self._param_type_formatters:
+            return self._param_type_formatters[typestr]
+        else:
+            raise Exception(f"unexpected type: {typestr}")
 
     def _serialize(self, dataframe):
         response_data = dataframe.to_dict(orient="records")
@@ -27,15 +39,21 @@ class WeatherQueryResource:
             "records": response_data
         }
 
+    def _format_param_for_query(self, pk, pv):
+        formatter = self._param_type_formatter(self._param_types[pk])
+        return formatter(pv)
+
     def on_get(self, req: falcon.Request, rsp: falcon.Response):
         for p in req.params:
-            if not p in self.query_params:
+            if not p in self._query_params:
                 raise falcon.HTTPBadRequest(
                     title="Invalid Query Parameter",
-                    description=f"invalid query parameter: {p}; expected one of {self.query_params}"
+                    description=f"invalid query parameter: {p}; expected one of {self._query_params}"
                 )
-        dataframe_query = " & ".join([f"{k} == {req.params[k]}" for k in req.params if not k == "limit" ])
-        rsp.media = self._serialize(self.data.query(dataframe_query))
+        dataframe_query = " & ".join(
+            [f"{k} == {self._format_param_for_query(k, req.params[k])}" for k in req.params if not k == "limit" ]
+        )
+        rsp.media = self._serialize(self._data.query(dataframe_query))
 
 
 def limit(dataframe, n):
