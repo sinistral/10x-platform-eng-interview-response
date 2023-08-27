@@ -5,10 +5,7 @@ WORKDIR /var/10x/app
 
 ADD requirements.txt .
 RUN pip install -r requirements.txt
-ADD weather.py .
-ADD seattle-weather.csv .
+ADD testclient.py .
 
-CMD ["weather.py"]
+CMD ["testclient.py"]
 ENTRYPOINT ["python"]
-
-EXPOSE 8000

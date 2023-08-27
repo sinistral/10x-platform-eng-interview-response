@@ -4,7 +4,7 @@ image-name-prefix := weather
 image-repo-prefix := $(image-group)/$(image-name-prefix)
 image-version     := 0.0.1
 
-images  = service
+images  = service testclient
 
 .PHONY: all clean
 
