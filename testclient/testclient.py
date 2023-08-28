@@ -1,6 +1,10 @@
 
 import requests
 
+rsp = requests.get("http://host.docker.internal:80/query")
+assert len(rsp.json()["records"]) == 1461
+print(rsp.json())
+
 rsp = requests.get("http://host.docker.internal:80/query?weather=rain&limit=5")
 assert len(rsp.json()["records"]) == 5
 print(rsp.json())

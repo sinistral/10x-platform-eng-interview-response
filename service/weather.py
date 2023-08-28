@@ -68,10 +68,20 @@ class WeatherQueryResource:
                 if not k == LIMIT_PARAM_NAME
             ]
         )
+        # Note: For the sake of simplicity for an interview challenge, we return
+        # the entire dataset if no filtering parameters have been specified.  It
+        # seems unlikely that we'd ever want to do this without pagination in
+        # production for any reasonable sized dataset.
+        select_fn = \
+            (lambda: self._data.query(dataframe_query)) \
+            if dataframe_query.strip() \
+            else lambda : self._data
+
         limit_fn = \
-            (lambda df: df.head(int(req.params[LIMIT_PARAM_NAME]))) if (LIMIT_PARAM_NAME in req.params) \
+            (lambda df: df.head(int(req.params[LIMIT_PARAM_NAME]))) \
+            if (LIMIT_PARAM_NAME in req.params) \
             else lambda x: x
-        rsp.media = self._serialize(limit_fn(self._data.query(dataframe_query)))
+        rsp.media = self._serialize(limit_fn(select_fn()))
 
 
 app = falcon.App()
