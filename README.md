@@ -1,38 +1,75 @@
-## 10x Genomics Platform Engineering Technical Coding Prompt
+## 10x Genomics Platform Engineering Technical Coding Response
 
-Create a web service that converts a CSV file into an API that exposes JSON.
+### Overview
 
-We've provided a CSV file of Seattle weather in
-[`seattle-weather.csv`](./seattle-weather.csv). It contains the following
-labels in the header, with the following format:
+A lightweight web-service for weather data for the city of Seattle.  The serivce
+supports filtering weather results by the following fields:
+
+ * date
+ * precipitation
+ * temp_max
+ * temp_min
+ * wind
+ * weather
+
+For example:
 
 ```
-date,precipitation,temp_max,temp_min,wind,weather
-...
-2012-06-03,0.0,17.2,9.4,2.9,sun
-2012-06-04,1.3,12.8,8.9,3.1,rain
-...
+curl "localhost:8000/query?weather=rain&wind=4.5&temp_min=11.1" | jq
 ```
 
-## Your tasks (in no specific order):
+Filtering is limited to "intersection" queries; that is: query parameters are
+combined using logical AND, and only results matching ALL values are returned.
+Matching records are returned as JSON, wrapped in a top-level key `records`; e.g.:
 
-1. Read in CSV file, output JSON
-2. Create a server that responds to a `GET` request with the output in JSON
-3. Set up querying on the data:
-    - Limit results to a number `http://my-server.example.com/query?limit=5`
-    - By date: `http://my-server.example.com/query?date=2012-06-04`
-    - By weather type: `http://my-server.example.com/query?weather=rain`
-4. Create multi-query filtering, eg. `http://my-server.example.com/query?weather=rain&limit=5`
+```
+curl "localhost:80/query?weather=rain&wind=4.5&temp_min=11.1" | jq
+{
+  "records": [
+    {
+      "date": "2013-09-23",
+      "precipitation": 2.8,
+      "temp_max": 16.1,
+      "temp_min": 11.1,
+      "wind": 4.5,
+      "weather": "rain"
+    }
+  ]
+}
+```
 
-## Bonus
+### Setup
 
-1. Bundle the service into a Docker image and run it as a container
-2. Query the service API from outside the container
+Development requires: 
 
-## Bonus 2
+ * GNU Make
+ * Docker
+ * Python 3; Docker images are built using an appropriate base image, and local
+   setup (to run the service locally, outside of a container) should match at
+   least the minor version.
+   
+### Build images
 
-1. Write a script to test the service API
-2. Bundle the test script into its own Docker image
-2. Run the test script image from a separate container and hit the same API
+From a fresh checkout of the repository, run
 
-> Weather data from: https://github.com/vega/vega/blob/main/docs/data/seattle-weather.csv
+```
+make
+```
+
+to build all images.
+
+### Test images
+
+Start two terminal sessions to test the service after building.  In the first,
+start the service:
+
+```
+docker run -t -p 80:8000 10x/weather-service:0.0.1
+```
+
+In the second, run the test client to run some basic queries through the
+locally running weather service container:
+
+```
+docker run -t 10x/weather-testclient:0.0.1
+```
