@@ -15,7 +15,7 @@ supports filtering weather results by the following fields:
 For example:
 
 ```
-curl "localhost:8000/query?weather=rain&wind=4.5&temp_min=11.1" | jq
+curl "localhost:80/query?weather=rain&wind=4.5&temp_min=11.1" | jq
 ```
 
 Filtering is limited to "intersection" queries; that is: query parameters are
@@ -24,6 +24,11 @@ Matching records are returned as JSON, wrapped in a top-level key `records`; e.g
 
 ```
 curl "localhost:80/query?weather=rain&wind=4.5&temp_min=11.1" | jq
+```
+
+returns
+
+```json
 {
   "records": [
     {
