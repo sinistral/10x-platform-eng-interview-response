@@ -52,7 +52,8 @@ class WeatherQueryResource:
         # pagination to protect the service, and that would require adding a
         # pagintation token to the response.
         return {
-            "records": response_data
+            "records": response_data,
+            "recordCount": len(response_data)
         }
 
     def _format_param_for_query(self, pk, pv):
